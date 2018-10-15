@@ -1,17 +1,20 @@
 import * as request from 'request-promise-native';
-import { Room } from './Room';
 
-export async function getData(base: string, query: string): Promise<Room> {
+export class HttpHandling {
 
-	const baseUrl = base;
-	const queryString = query;
-	const url = "http://" + baseUrl + queryString;
+	url: string;
 
-	var options = {
-		url: url
-	};
-	const res = await request.get(options);
-	const response = JSON.parse(res);
+	constructor(base: string, query: string) {
+		this.url = base + query;
+	}
 
-	return new Room(response.id, response.rooms, response.chests);
+	async getData(): Promise<any> {
+		let options = {
+			url: "http://" + this.url
+		};
+		const res = await request.get(options);
+		const response = JSON.parse(res);
+
+		return response;
+	}
 }
