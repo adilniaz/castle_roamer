@@ -1,61 +1,68 @@
 import { HttpHandling } from './HttpHandling';
 import { Room } from './Room';
+import { Chest } from './Chest';
+
+const Promise0 = require('bluebird')
+
 
 export class Roamer {
 	base: string;
 	query: string;
-	url: string;
 	room: Room;
-	chests: string[];
+	chest: Chest;
 	chestsWithTreasure: string[];
-
+	httpHandling: HttpHandling;
 
 	constructor(base: string, query: string) {
 		this.base = base;
 		this.query = query;
-		this.url = base + query;
+
+		this.httpHandling = new HttpHandling(base);
+
+		this.chest = new Chest('', '');
 		this.room = new Room('', [], []);
-		this.chests = [];
+
 		this.chestsWithTreasure = [];
 	}
 
 	async beginSearching(): Promise<string[]> {
 		await this.exploreRoom();
 
-		if (this.room.id != '' && this.room.rooms.length > 0) {
-			for (let roomId of this.room.rooms) {
-				let roamer = new Roamer(this.base, roomId);
-				this.chestsWithTreasure = this.chestsWithTreasure.concat(await roamer.beginSearching());
-			}
+		// CHESTS
+		if (this.room.chests.length > 0) {
+			await Promise0.map(this.room.chests, async (chestPath: string) => {
+				await this.getChest(chestPath);
+			}, { concurrency: 10 });
+		}
 
+		// ROOMS
+		if (this.room.rooms.length > 0) {
+			await Promise0.map(this.room.rooms, async (roomPath: string) => {
+				await this.getRoom(roomPath)
+			}, { concurrency: 10 });
 		}
-		if (this.room.id != '') {
-			this.chests = this.room.chests;
-			await this.verifyChests(this.chests);
-		}
-		if (this.chestsWithTreasure.length > 0)
-			console.log(this.chestsWithTreasure);
+
 		return this.chestsWithTreasure;
 	}
 
 	async exploreRoom() {
-		let httpHandling = new HttpHandling(this.base, this.query);
-		const room = await httpHandling.getData();
-		if (room.id) {
+		const room = await this.httpHandling.getData(this.query);
+		if (room && room.id) {
 			this.room = room;
 		}
 	}
 
+	async getChest(chestPath: string) {
+		const chest = <Chest>await this.httpHandling.getData(chestPath);
+		if (chest && !chest.status.includes('empty')) {
+			this.chestsWithTreasure.push(chest.id);
+		}
+	}
 
-	async verifyChests(chests: string[]) {
-		if (chests.length > 0)
-			for (let chestId of chests) {
-				let httpHandling = new HttpHandling(this.base, chestId);
-				const chest = await httpHandling.getData();
-				if (!chest.status.includes('empty')) {
-					this.chestsWithTreasure.push(chest.id);
-				}
-			}
+	async getRoom(roomPath: string) {
+		let roamer = new Roamer(this.base, roomPath);
+		const res = await roamer.beginSearching();
+		this.chestsWithTreasure = this.chestsWithTreasure.concat(res);
 	}
 
 }

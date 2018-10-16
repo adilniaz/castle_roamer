@@ -2,19 +2,21 @@ import * as request from 'request-promise-native';
 
 export class HttpHandling {
 
-	url: string;
+	base: string;
 
-	constructor(base: string, query: string) {
-		this.url = base + query;
+	constructor(base: string) {
+		this.base = base;
 	}
 
-	async getData(): Promise<any> {
+	async getData(base: string): Promise<any> {
 		let options = {
-			url: "http://" + this.url
+			url: "http://" + this.base + base
 		};
-		const res = await request.get(options);
-		const response = JSON.parse(res);
 
-		return response;
+		try {
+			const response = await request(options);
+			return Promise.resolve(JSON.parse(response));
+		}
+		catch (error) { }
 	}
 }
