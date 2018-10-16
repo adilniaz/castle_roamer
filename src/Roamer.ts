@@ -19,44 +19,43 @@ export class Roamer {
 		this.chestsWithTreasure = [];
 	}
 
-	async beginSearching() {
-		console.log('<')
+	async beginSearching(): Promise<string[]> {
 		await this.exploreRoom();
 
-		console.log(this.room.id);
-
-		this.chests = this.room.chests;
-		await this.verifyChests(this.chests);
-
-		if (this.room.rooms.length >= 1) {
+		if (this.room.id != '' && this.room.rooms.length > 0) {
 			for (let roomId of this.room.rooms) {
 				let roamer = new Roamer(this.base, roomId);
-				roamer.beginSearching();
+				this.chestsWithTreasure = this.chestsWithTreasure.concat(await roamer.beginSearching());
 			}
 
 		}
-
-		console.log(this.chestsWithTreasure + '\n>');
-		console.log(new Date());
+		if (this.room.id != '') {
+			this.chests = this.room.chests;
+			await this.verifyChests(this.chests);
+		}
+		if (this.chestsWithTreasure.length > 0)
+			console.log(this.chestsWithTreasure);
+		return this.chestsWithTreasure;
 	}
 
 	async exploreRoom() {
 		let httpHandling = new HttpHandling(this.base, this.query);
 		const room = await httpHandling.getData();
-		this.room = room;
+		if (room.id) {
+			this.room = room;
+		}
 	}
 
 
 	async verifyChests(chests: string[]) {
-		console.log('-');
-		for (let chestId of chests) {
-			let httpHandling = new HttpHandling(this.base, chestId);
-			const chest = await httpHandling.getData();
-			if (!chest.status.includes('empty')) {
-				this.chestsWithTreasure.push(chest.id);
+		if (chests.length > 0)
+			for (let chestId of chests) {
+				let httpHandling = new HttpHandling(this.base, chestId);
+				const chest = await httpHandling.getData();
+				if (!chest.status.includes('empty')) {
+					this.chestsWithTreasure.push(chest.id);
+				}
 			}
-		}
-		console.log('-');
 	}
 
 }

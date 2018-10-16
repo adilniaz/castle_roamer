@@ -14,7 +14,10 @@ export async function run() {
 
 	console.log(new Date());
 	let roamer = new Roamer(base, query);
-	roamer.beginSearching();
+	const chests = await roamer.beginSearching();
+
+	console.log("Number of chests : " + chests.length);
+	console.log("Chests Ids : " + chests);
 }
 
 run();
